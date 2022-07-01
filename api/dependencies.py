@@ -2,10 +2,16 @@ import json
 import logging
 import os
 from typing import Callable
+import base64
+import hmac
+from hashlib import sha256
 
 from google.cloud import pubsub_v1
+from fastapi import Request, HTTPException, status
 
 log = logging.getLogger(__name__)
+
+API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
 
 
 class Topic(object):
@@ -41,3 +47,12 @@ class GooglePubSubTopic(Topic):
         sub_path = self._subscribe_client.subscription_path(self._project_id, subscription)
         future = self._subscribe_client.subscribe(sub_path, callback)
         future.result()
+
+
+async def verify_hmac(request: Request, hmac_header: bytes):
+    raw_body = await request.body()
+    sig = base64.b64encode(hmac.new(bytes(API_SECRET, 'latin-1'), msg=raw_body, digestmod=sha256).digest())
+    if not hmac.compare_digest(sig, hmac_header):
+        log.info(f"Computed hmac: {sig} != received {hmac_header}")
+        log.info(request)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
