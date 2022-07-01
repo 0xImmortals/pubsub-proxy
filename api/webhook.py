@@ -15,5 +15,8 @@ router = APIRouter(
 async def handle_webhook(obj: str, action: str, request: Request):
     data = await request.json()
     topic = GooglePubSubTopic(f"{obj}-{action}")
-    topic.publish(data)
+    topic.publish({
+        "body": data,
+        "headers": request.headers.items()
+    })
     return {"message": "ok"}
