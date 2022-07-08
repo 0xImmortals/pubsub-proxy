@@ -14,13 +14,18 @@ router = APIRouter(
     tags=["Webhooks"]
 )
 
+topic_prefix = os.environ.get("TOPIC_PREFIX", None)
+
 
 @router.post("/{obj}/{action}")
 async def handle_webhook(obj: str, action: str, request: Request,
                          x_shopify_hmac_sha256: bytes = Header(None)):
     data = await request.json()
     await verify_hmac(request, x_shopify_hmac_sha256)
-    topic = GooglePubSubTopic(f"{obj}-{action}")
+    if topic_prefix:
+        topic = GooglePubSubTopic(f"{topic_prefix}-{obj}-{action}")
+    else:
+        topic = GooglePubSubTopic(f"{obj}-{action}")
     topic.publish({
         "body": data,
         "headers": dict(request.headers.items())
