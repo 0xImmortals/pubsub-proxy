@@ -14,17 +14,17 @@ router = APIRouter(
     tags=["Webhooks"]
 )
 
-topic_prefix = os.environ.get("TOPIC_PREFIX", None)
-
+# we do not need topic prefix in stage. just send traffic to /webhooks/:category/:sub on the stage-api-gcloud app.
+#  topic_prefix = os.environ.get("TOPIC_PREFIX", None)
 
 @router.post("/{obj}/{action}")
 async def handle_webhook(obj: str, action: str, request: Request,
                          x_shopify_hmac_sha256: bytes = Header(None)):
     data = await request.json()
     await verify_hmac(request, x_shopify_hmac_sha256)
-    if topic_prefix:
-        topic = GooglePubSubTopic(f"{topic_prefix}-{obj}-{action}")
-    else:
+#     if topic_prefix:
+#         topic = GooglePubSubTopic(f"{topic_prefix}-{obj}-{action}")
+#     else:
         topic = GooglePubSubTopic(f"{obj}-{action}")
     topic.publish({
         "body": data,
